@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Searchbar } from './SearchBar/SearchBar';
 import { Button } from './Button/Button';
@@ -6,22 +6,19 @@ import FetchImages from 'Helpers/PixabayAPI';
 import { StyledAppBox } from './App.styled';
 import { MagnifyingGlass } from 'react-loader-spinner';
 import { toast } from 'react-toastify';
-import Modal from './Modal/Modal';
+import { Modal } from './Modal/Modal';
 
-export default class App extends Component {
-  state = {
-    gallery: [],
-    page: 1,
-    maxPage: 2,
-    query: '',
-    loading: false,
-    isModalOpen: false,
-    isMaxPage: false,
-    currentImg: null,
-    currentAlt: null,
-  };
+export const App = () => {
+  const [gallery, setGallery] = useState([]);
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentImg, setCurrentImg] = useState(null);
+  const [currentAlt, setCurrentAlt] = useState(null);
+  const [total, setTotal] = useState(0);
 
-  componentDidMount() {
+  useEffect(() => {
     toast(
       `(●'◡'●) Hello, it is image searcher just enter properly name in the field >>> `,
       {
@@ -29,104 +26,76 @@ export default class App extends Component {
         autoClose: 3000,
       }
     );
-  }
+  }, []);
 
-  async componentDidUpdate(_, prevState) {
-    const { page, query } = this.state;
-    if (prevState.page !== page || query !== prevState.query) {
-      this.setState({ loading: true });
-      try {
-        const { hits, totalHits } = await FetchImages(page, query);
-
-        if (!totalHits) {
-          toast.error(
-            `We can't find any images by ${query}, enter properly name`
-          );
-          return;
-        }
-
-        if (page === 1) {
-          this.setState({
-            maxPage: Math.floor(totalHits / hits.length),
-            isMaxPage: false,
-          });
-          toast.success(
-            `we find ${totalHits} of ${query} here ${hits.length} images`
-          );
-        }
-
-        if (page >= prevState.maxPage) {
-          this.setState({ isMaxPage: true });
-          toast.success(`You got to the end of gallery`);
-          return;
-        }
-
-        this.setState(prev => ({ gallery: [...prev.gallery, ...hits] }));
-      } catch (error) {
-        console.log(error.message);
-      } finally {
-        this.setState({ loading: false });
+  useEffect(() => {
+    async function getImages() {
+      const { hits, totalHits } = await FetchImages(page, query);
+      if (!totalHits) {
+        toast.error(
+          `We can't find any images by ${query}, enter properly name`
+        );
+        return;
       }
+      if (page === 1) {
+        setTotal(totalHits);
+        toast.success(
+          `we find ${totalHits} of ${query} here ${hits.length} images`
+        );
+      }
+
+      setGallery(prev => [...prev, ...hits]);
     }
-  }
 
-  handleSubmit = e => {
-    e.preventDefault();
+    setLoading(true);
+    try {
+      getImages();
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  }, [query, page]);
 
-    if (!e.target.elements.search.value) {
+  const handleSubmit = value => {
+    if (!value) {
       toast.error('Enter some object to find');
       return;
     }
 
-    if (this.state.query !== e.target.elements.search.value) {
-      this.setState(
-        prev => ({
-          query: e.target.elements.search.value,
-          page: 1,
-          gallery: [],
-        }),
-        () => e.target.reset()
-      );
+    if (query !== value) {
+      setQuery(value);
+      setPage(1);
+      setGallery([]);
     } else {
-      toast.info(`You already queried a ${this.state.query}`);
-      e.target.reset();
+      toast.info(`You already queried a ${query}`);
     }
   };
 
-  handleLoadMore = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
   };
 
-  handleOpenModal = (img, alt) => {
-    this.setState(prev => ({
-      isModalOpen: !prev.isModalOpen,
-      currentImg: img,
-      currentAlt: alt,
-    }));
+  const handleOpenModal = (img, alt) => {
+    setIsModalOpen(prev => !prev);
+    setCurrentAlt(alt);
+    setCurrentImg(img);
   };
 
-  render() {
-    const { gallery, loading, isModalOpen, currentImg, currentAlt, isMaxPage } =
-      this.state;
-    return (
-      <StyledAppBox>
-        <Searchbar onSubmit={this.handleSubmit} />
-        <ImageGallery
-          gallery={gallery}
-          handleOpenModal={this.handleOpenModal}
+  return (
+    <StyledAppBox>
+      <Searchbar onSubmit={handleSubmit} />
+      <ImageGallery gallery={gallery} handleOpenModal={handleOpenModal} />
+      {loading && <MagnifyingGlass wrapperClass="spinner" />}
+      {gallery.length && total > gallery.length ? (
+        <Button onLoadMore={handleLoadMore} />
+      ) : null}
+      {isModalOpen && (
+        <Modal
+          currentImg={currentImg}
+          currentAlt={currentAlt}
+          closeModal={handleOpenModal}
         />
-        {loading && <MagnifyingGlass wrapperClass="spinner" />}
-        {gallery.length && !isMaxPage ? (
-          <Button onLoadMore={this.handleLoadMore} />
-        ) : null}
-        {isModalOpen && (
-          <Modal
-            currentImg={currentImg}
-            currentAlt={currentAlt}
-            closeModal={this.handleOpenModal}
-          />
-        )}
-      </StyledAppBox>
-    );
-  }
-}
+      )}
+    </StyledAppBox>
+  );
+};

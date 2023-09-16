@@ -1,32 +1,38 @@
-import React, { Component } from 'react';
+import React, { useEffect } from 'react';
 import { StyledModal, StyledOverlay } from './Modal.styled';
 import PropTypes from 'prop-types';
 
-export default class Modal extends Component {
-  handleKeyDown = e => {
-    if (e.key === 'Escape') {
-      this.props.closeModal();
+export const Modal = ({ closeModal, currentAlt, currentImg }) => {
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+
+    document.body.classList.add('modal-open');
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closeModal]);
+
+  const onBackDropClick = e => {
+    if (e.currentTarget === e.target) {
+      closeModal();
     }
   };
-  componentDidMount() {
-    document.body.classList.add('modal-open');
-    document.addEventListener('keydown', this.handleKeyDown);
-  }
-  componentWillUnmount() {
-    document.body.classList.remove('modal-open');
-    document.removeEventListener('keydown', this.handleKeyDown);
-  }
 
-  render() {
-    return (
-      <StyledOverlay onClick={this.props.closeModal}>
-        <StyledModal>
-          <img src={this.props.currentImg} alt={this.props.currentAlt} />
-        </StyledModal>
-      </StyledOverlay>
-    );
-  }
-}
+  return (
+    <StyledOverlay onClick={onBackDropClick}>
+      <StyledModal>
+        <img src={currentImg} alt={currentAlt} />
+      </StyledModal>
+    </StyledOverlay>
+  );
+};
 
 Modal.propTypes = {
   closeModal: PropTypes.func,

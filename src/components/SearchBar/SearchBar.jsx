@@ -9,9 +9,14 @@ import {
 import PropTypes from 'prop-types';
 
 export const Searchbar = ({ onSubmit }) => {
+  const handleSubmit = e => {
+    e.preventDefault();
+    onSubmit(e.target.elements.search.value);
+    e.target.reset();
+  };
   return (
     <StyledHeader>
-      <StyledSearchForm onSubmit={onSubmit}>
+      <StyledSearchForm onSubmit={handleSubmit}>
         <StyledBtn type="submit">
           <StyledSpan>Search</StyledSpan>
         </StyledBtn>
